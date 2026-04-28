@@ -23,6 +23,11 @@ public class CallbackHandlingDemo {
 
         CallbackPayload payload = CallbackParser.parse(body);
 
+        if (payload.getEvent() == null) {
+            System.out.println("未知事件");
+            return;
+        }
+
         switch (payload.getEvent()) {
             case MESSAGE_COMPLETE -> {
                 var info = payload.getMessageInfo();
@@ -36,7 +41,6 @@ public class CallbackHandlingDemo {
                 var info = payload.getFriendInfo();
                 System.out.printf("新增好友 %s, qrCode=%s%n", info.getNickName(), payload.getQrCode());
             }
-            case null -> System.out.println("未知事件");
         }
     }
 }

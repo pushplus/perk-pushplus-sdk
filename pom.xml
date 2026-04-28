@@ -6,7 +6,7 @@
 
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
     <packaging>pom</packaging>
 
     <name>perk-pushplus-sdk</name>
@@ -51,9 +51,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>21</java.version>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <java.version>17</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
 
         <revision>1.0.0</revision>
 
@@ -160,8 +159,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
                     <configuration>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
+                        <release>${java.version}</release>
                         <encoding>UTF-8</encoding>
                         <annotationProcessorPaths>
                             <path>
@@ -198,7 +196,7 @@
                         <failOnWarnings>false</failOnWarnings>
                         <quiet>true</quiet>
                         <additionalJOption>-Xdoclint:none</additionalJOption>
-                        <source>${java.version}</source>
+                        <release>${java.version}</release>
                         <detectJavaApiLink>false</detectJavaApiLink>
                         <detectLinks>false</detectLinks>
                         <detectOfflineLinks>false</detectOfflineLinks>

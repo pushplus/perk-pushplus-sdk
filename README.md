@@ -3,7 +3,7 @@
 [PushPlus(推送加)](https://www.pushplus.plus) 官方接口的 Java SDK，覆盖**消息发送接口**与**全部开放接口**。
 
 - 纯 Java SDK + Spring Boot Starter 双模块设计
-- Java 21、JDK 内置 `HttpClient`（无 OkHttp 等额外重依赖）
+- Java 17+、JDK 内置 `HttpClient`（无 OkHttp 等额外重依赖）
 - AccessKey **自动获取、缓存、过期前刷新、失效自动重试**，调用方无感知
 - **本地限流守卫**：发送接口命中 `code=900`（请求次数过多）时自动短路同 token 的后续调用，避免无效请求与账号进一步受限（[官方建议](https://www.pushplus.plus/doc/guide/code.html)）
 - 单条 `/send`、多渠道 `/batchSend`、消息回调（`message_complate` / `add_topic_user` / `add_friend`）类型化解析
@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 
