@@ -1,0 +1,57 @@
+{
+  "groups": [
+    {
+      "name": "pushplus",
+      "type": "io.github.perk.pushplus.spring.PushPlusProperties",
+      "description": "PushPlus SDK 配置项。"
+    }
+  ],
+  "properties": [
+    {
+      "name": "pushplus.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 PushPlus 自动装配。",
+      "defaultValue": true
+    },
+    {
+      "name": "pushplus.token",
+      "type": "java.lang.String",
+      "description": "PushPlus 用户 token 或消息 token。"
+    },
+    {
+      "name": "pushplus.secret-key",
+      "type": "java.lang.String",
+      "description": "PushPlus 用户 secretKey，调用开放接口必填。"
+    },
+    {
+      "name": "pushplus.base-url",
+      "type": "java.lang.String",
+      "description": "PushPlus 服务基础地址。",
+      "defaultValue": "https://www.pushplus.plus"
+    },
+    {
+      "name": "pushplus.connect-timeout",
+      "type": "java.time.Duration",
+      "description": "HTTP 连接超时。",
+      "defaultValue": "10s"
+    },
+    {
+      "name": "pushplus.read-timeout",
+      "type": "java.time.Duration",
+      "description": "HTTP 读超时。",
+      "defaultValue": "30s"
+    },
+    {
+      "name": "pushplus.access-key-refresh-ahead-seconds",
+      "type": "java.lang.Long",
+      "description": "AccessKey 提前刷新秒数。",
+      "defaultValue": 300
+    },
+    {
+      "name": "pushplus.log-request",
+      "type": "java.lang.Boolean",
+      "description": "是否记录请求/响应详细日志。",
+      "defaultValue": false
+    }
+  ]
+}
