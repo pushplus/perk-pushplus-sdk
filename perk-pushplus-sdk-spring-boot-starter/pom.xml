@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.perk-net</groupId>
         <artifactId>perk-pushplus-sdk</artifactId>
-        <version>1.0.4</version>
+        <version>1.0.5</version>
     </parent>
 
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
