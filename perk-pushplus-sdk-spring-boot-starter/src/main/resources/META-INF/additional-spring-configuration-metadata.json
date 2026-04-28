@@ -2,7 +2,7 @@
   "groups": [
     {
       "name": "pushplus",
-      "type": "io.github.perk.pushplus.spring.PushPlusProperties",
+      "type": "com.perk.pushplus.spring.PushPlusProperties",
       "description": "PushPlus SDK 配置项。"
     }
   ],

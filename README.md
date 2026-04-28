@@ -5,9 +5,10 @@
 - 纯 Java SDK + Spring Boot Starter 双模块设计
 - Java 21、JDK 内置 `HttpClient`（无 OkHttp 等额外重依赖）
 - AccessKey **自动获取、缓存、过期前刷新、失效自动重试**，调用方无感知
+- **本地限流守卫**：发送接口命中 `code=900`（请求次数过多）时自动短路同 token 的后续调用，避免无效请求与账号进一步受限（[官方建议](https://www.pushplus.plus/doc/guide/code.html)）
 - 单条 `/send`、多渠道 `/batchSend`、消息回调（`message_complate` / `add_topic_user` / `add_friend`）类型化解析
 - 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、功能设置、预处理
-- 完善的 Builder 模式与强类型枚举（`Channel`、`Template`、`SendStatus`、`WebhookType`、`CallbackEvent`）
+- 完善的 Builder 模式与强类型枚举（`Channel`、`Template`、`SendStatus`、`WebhookType`、`CallbackEvent`、`ErrorCode`）
 
 ## 模块说明
 
@@ -25,9 +26,9 @@
 
 ```xml
 <dependency>
-    <groupId>com.perk</groupId>
+    <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 
@@ -35,9 +36,9 @@ Spring Boot 项目：
 
 ```xml
 <dependency>
-    <groupId>com.perk</groupId>
+    <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.4</version>
 </dependency>
 ```
 
@@ -166,6 +167,8 @@ pushplus:
   read-timeout: 30s
   access-key-refresh-ahead-seconds: 300
   log-request: false
+  rate-limit-guard-enabled: true       # 命中 code=900 后本地短路，默认开
+  rate-limit-cooldown:                 # 留空表示禁推到次日 0 点；可显式写 2d / 24h 等
 ```
 
 随后即可注入：
@@ -199,6 +202,8 @@ public class NotifyService {
 | `readTimeout` | 30s | 读超时 |
 | `accessKeyRefreshAheadSeconds` | 300 | AccessKey 提前刷新秒数（PushPlus 文档说明老 key 在新 key 生成后 5 分钟内仍可用） |
 | `logRequest` | false | 开启 DEBUG 级别的请求/响应日志 |
+| `rateLimitGuardEnabled` | true | 是否启用本地限流守卫；命中 `code=900` 后短路同 token 的发送请求 |
+| `rateLimitCooldown` | – | 命中 `code=900` 后的本地禁推时长；为空表示到"次日 0 点"，可显式设置 `Duration.ofDays(2)` |
 
 ## 异常处理
 
@@ -207,13 +212,64 @@ public class NotifyService {
 - HTTP 调用失败：`code` 为 HTTP 状态码
 - 业务接口返回 `code != 200`：`code` 为业务码、`message` 为业务消息
 - SDK 参数校验失败：`code = -1`
+- **本地限流守卫命中**（不发起 HTTP）：`code = 900`、`message` 包含 "本地限流守卫" 字样
+
+`ErrorCode` 枚举已经把官方文档的全部业务码语义化（`OK / NOT_LOGIN / UNAUTHORIZED / IP_FORBIDDEN / SERVER_ERROR / DATA_ERROR / FORBIDDEN_VIEW / INSUFFICIENT_POINTS / RATE_LIMITED / INVALID_TOKEN / NOT_VERIFIED / VALIDATION_ERROR`），无需再用魔法数字判断。
 
 ```java
 try {
     client.sendSimple("t", "c");
 } catch (PushPlusException e) {
-    log.warn("PushPlus 失败: code={}, msg={}", e.getCode(), e.getMessage());
+    if (e.isRateLimited()) {                  // 等价于 e.getErrorCode() == ErrorCode.RATE_LIMITED
+        log.warn("PushPlus 限流，今天暂停推送: {}", e.getMessage());
+        return;
+    }
+    switch (e.getErrorCode()) {
+        case INVALID_TOKEN     -> log.error("token 错误，立即排查配置");
+        case NOT_VERIFIED      -> log.error("账号未实名认证");
+        case INSUFFICIENT_POINTS -> log.warn("积分不足");
+        default -> log.warn("PushPlus 失败: code={}, msg={}", e.getCode(), e.getMessage());
+    }
 }
+```
+
+参考：[PushPlus 接口返回码说明](https://www.pushplus.plus/doc/guide/code.html)。
+
+## 限流守卫（code=900 自动短路）
+
+PushPlus 在请求次数过多时会返回 `code=900`，官方文档明确建议"根据返回值判断当天是否让程序继续调用发送消息接口，否则会让账号进一步受限"。SDK 默认替你做这件事：
+
+- 任意一次 `client.send(...)` / `client.batchSend(...)` 命中 `code=900` 后，SDK 会按 token 维度记下"禁推至 X 时刻"。
+- 同 token 后续发送调用不再发起 HTTP，直接抛 `PushPlusException(code=900, msg="本地限流守卫…")`。
+- 默认禁推到**系统时区的次日 0 点**；通过 `rateLimitCooldown` 可改为固定时长（例如文档示例的 2 天）。
+- 仅作用于 `MessageApi`（`send` / `batchSend`），开放接口不受影响。
+- 进程内单例，**不跨进程共享**——多实例部署时每个进程最多被命中一次。
+
+可观察 / 可干预：
+
+```java
+RateLimitGuard guard = client.getRateLimitGuard();
+
+Instant until = guard.blockedUntil("user_token");   // null 表示未被限流；否则为本地解禁时间
+guard.clear("user_token");                          // 例如：人工确认服务端已解禁后立即放行
+```
+
+需要完全关闭这个行为（不推荐）：
+
+```java
+PushPlusClient client = PushPlusClient.builder()
+        .token("xxx")
+        .rateLimitGuardEnabled(false)
+        .build();
+```
+
+或者按业务把禁推时长拉长 / 缩短：
+
+```java
+PushPlusClient client = PushPlusClient.builder()
+        .token("xxx")
+        .rateLimitCooldown(Duration.ofDays(2))   // 与文档示例的"2 天恢复正常"对齐
+        .build();
 ```
 
 ## 构建与发布
@@ -222,7 +278,7 @@ try {
 ./mvnw clean install     # 本地安装
 ./mvnw test              # 跑单元测试
 ./mvnw -pl perk-pushplus-sdk-example exec:java \
-       -Dexec.mainClass=io.github.perk.pushplus.example.QuickStart  # 跑示例
+       -Dexec.mainClass=example.com.perk.pushplus.QuickStart  # 跑示例
 ```
 
 ## License
