@@ -5,6 +5,7 @@ import com.perk.pushplus.api.AccessKeyApi;
 import com.perk.pushplus.api.ChannelApi;
 import com.perk.pushplus.api.ClawBotApi;
 import com.perk.pushplus.api.FriendApi;
+import com.perk.pushplus.api.ImageApi;
 import com.perk.pushplus.api.MessageApi;
 import com.perk.pushplus.api.MessageTokenApi;
 import com.perk.pushplus.api.OpenMessageApi;
@@ -68,6 +69,7 @@ public class PushPlusClient {
     @Getter private final ClawBotApi clawBot;
     @Getter private final SettingApi setting;
     @Getter private final PreApi pre;
+    @Getter private final ImageApi image;
 
     private PushPlusClient(PushPlusConfig config, HttpRequester httpRequester) {
         if (config == null) {
@@ -92,6 +94,7 @@ public class PushPlusClient {
         this.clawBot = new ClawBotApi(this.config, this.httpRequester, this.accessKeyManager);
         this.setting = new SettingApi(this.config, this.httpRequester, this.accessKeyManager);
         this.pre = new PreApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.image = new ImageApi(this.config, this.httpRequester, this.accessKeyManager);
     }
 
     /* =========================== 工厂 / Builder =========================== */

@@ -35,6 +35,17 @@ public class JdkHttpRequester implements HttpRequester {
 
     @Override
     public HttpResponse execute(String method, String url, Map<String, String> headers, String body) {
+        byte[] payload = body == null ? null : body.getBytes(StandardCharsets.UTF_8);
+        return doExecute(method, url, headers, payload, body, "application/json;charset=UTF-8");
+    }
+
+    @Override
+    public HttpResponse executeRaw(String method, String url, Map<String, String> headers, byte[] body) {
+        return doExecute(method, url, headers, body, null, "application/octet-stream");
+    }
+
+    private HttpResponse doExecute(String method, String url, Map<String, String> headers,
+                                   byte[] body, String bodyForLog, String defaultContentType) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .timeout(readTimeout);
@@ -54,10 +65,10 @@ public class JdkHttpRequester implements HttpRequester {
 
         HttpRequest.BodyPublisher bodyPublisher = body == null
                 ? HttpRequest.BodyPublishers.noBody()
-                : HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8);
+                : HttpRequest.BodyPublishers.ofByteArray(body);
 
-        if (body != null && !hasContentType) {
-            builder.header("Content-Type", "application/json;charset=UTF-8");
+        if (body != null && !hasContentType && defaultContentType != null) {
+            builder.header("Content-Type", defaultContentType);
         }
 
         switch (method.toUpperCase()) {
@@ -76,7 +87,11 @@ public class JdkHttpRequester implements HttpRequester {
 
         HttpRequest request = builder.build();
         if (logRequest) {
-            log.debug("[pushplus] >>> {} {} body={}", method, url, body);
+            if (bodyForLog != null) {
+                log.debug("[pushplus] >>> {} {} body={}", method, url, bodyForLog);
+            } else {
+                log.debug("[pushplus] >>> {} {} bodyBytes={}", method, url, body == null ? 0 : body.length);
+            }
         }
 
         try {

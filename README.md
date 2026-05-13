@@ -7,7 +7,7 @@
 - AccessKey **自动获取、缓存、过期前刷新、失效自动重试**，调用方无感知
 - **本地限流守卫**：发送接口命中 `code=900`（请求次数过多）时自动短路同 token 的后续调用，避免无效请求与账号进一步受限（[官方建议](https://www.pushplus.plus/doc/guide/code.html)）
 - 单条 `/send`、多渠道 `/batchSend`、消息回调（`message_complate` / `add_topic_user` / `add_friend`）类型化解析
-- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、功能设置、预处理
+- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、功能设置、预处理、图片服务
 - 完善的 Builder 模式与强类型枚举（`Channel`、`Template`、`SendStatus`、`WebhookType`、`CallbackEvent`、`ErrorCode`）
 
 ## 模块说明
@@ -117,6 +117,12 @@ client.getWebhook().add(WebhookSaveRequest.builder()
 
 // 功能设置
 client.getSetting().changeIsSend(1);
+
+// 图片服务（一行上传到 PushPlus 图床）
+ImageUploadResult img = client.getImage().uploadFile(Path.of("logo.png"));
+String url = img.getUrl();   // 直接拿到可访问的图片地址
+PageResult<ImageItem> imgs = client.getImage().list(PageQuery.of(1, 10));
+client.getImage().delete(imgs.getList().get(0).getId());
 ```
 
 各 API 一览：
@@ -136,6 +142,35 @@ client.getSetting().changeIsSend(1);
 | `client.getSetting()` | 九 功能设置接口 |
 | `client.getFriend()` | 十 好友功能接口 |
 | `client.getPre()` | 十一 预处理信息接口 |
+| `client.getImage()` | 十二 图片服务接口 |
+
+## 图片服务
+
+PushPlus 提供基于七牛云的图片图床（30 天有效，可主动删除）。SDK 把"获取上传凭证 → 多端表单上传 → 解析返回 URL"封装成一步：
+
+```java
+// 1) 最常用：一行上传本地文件，得到可访问的图片 URL
+ImageUploadResult r = client.getImage().uploadFile(Path.of("/tmp/logo.png"));
+String url = r.getUrl();
+
+// 2) 直接上传字节
+client.getImage().uploadBytes(bytes, "screenshot.png");
+
+// 3) 已上传图片列表
+PageResult<ImageItem> page = client.getImage().list(PageQuery.of(1, 10));
+
+// 4) 主动删除（未删除的图片默认 30 天后由系统自动清理）
+client.getImage().delete(page.getList().get(0).getId());
+```
+
+如果你的业务需要自己控制凭证的获取与上传过程（例如缓存 token、分布式上传），也可以拆开调用：
+
+```java
+ImageUploadToken token = client.getImage().getUploadToken();
+ImageUploadResult r = client.getImage().upload(token, bytes, "a.png", "image/png");
+```
+
+> 注意：上传图片的真正请求会按七牛云规范以 `multipart/form-data` 提交到 `uploadUrl`，**不会**携带 PushPlus 的 `access-key`；其余三个接口（获取凭证 / 列表 / 删除）走 PushPlus 开放接口，自动带上 `access-key`。
 
 ## 消息回调解析
 
