@@ -6,7 +6,7 @@
 
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk</artifactId>
-    <version>1.0.6</version>
+    <version>1.1.0</version>
     <packaging>pom</packaging>
 
     <name>perk-pushplus-sdk</name>
@@ -63,6 +63,8 @@
 
         <junit.version>5.11.4</junit.version>
         <mockito.version>5.14.2</mockito.version>
+
+        <central.publishing.skip>false</central.publishing.skip>
     </properties>
 
     <dependencyManagement>
@@ -148,6 +150,13 @@
                 <artifactId>maven-deploy-plugin</artifactId>
                 <configuration>
                     <skip>true</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <configuration>
+                    <skipPublishing>true</skipPublishing>
                 </configuration>
             </plugin>
         </plugins>
@@ -312,6 +321,7 @@
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
+                            <skipPublishing>${central.publishing.skip}</skipPublishing>
                         </configuration>
                     </plugin>
                 </plugins>

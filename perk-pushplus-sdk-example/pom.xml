@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.perk-net</groupId>
         <artifactId>perk-pushplus-sdk</artifactId>
-        <version>1.0.6</version>
+        <version>1.1.0</version>
     </parent>
 
     <artifactId>perk-pushplus-sdk-example</artifactId>
@@ -18,6 +18,18 @@
         <maven.deploy.skip>true</maven.deploy.skip>
         <central.publishing.skip>true</central.publishing.skip>
     </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <configuration>
+                    <skipPublishing>true</skipPublishing>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <dependencies>
         <dependency>
