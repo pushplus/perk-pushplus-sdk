@@ -63,8 +63,6 @@
 
         <junit.version>5.11.4</junit.version>
         <mockito.version>5.14.2</mockito.version>
-
-        <central.publishing.skip>false</central.publishing.skip>
     </properties>
 
     <dependencyManagement>
@@ -152,13 +150,6 @@
                     <skip>true</skip>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <configuration>
-                    <skipPublishing>true</skipPublishing>
-                </configuration>
-            </plugin>
         </plugins>
 
         <pluginManagement>
@@ -229,7 +220,7 @@
                 <plugin>
                     <groupId>org.sonatype.central</groupId>
                     <artifactId>central-publishing-maven-plugin</artifactId>
-                    <version>0.7.0</version>
+                    <version>0.10.0</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -321,7 +312,9 @@
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
-                            <skipPublishing>${central.publishing.skip}</skipPublishing>
+                            <excludeArtifacts>
+                                <excludeArtifact>perk-pushplus-sdk-example</excludeArtifact>
+                            </excludeArtifacts>
                         </configuration>
                     </plugin>
                 </plugins>
