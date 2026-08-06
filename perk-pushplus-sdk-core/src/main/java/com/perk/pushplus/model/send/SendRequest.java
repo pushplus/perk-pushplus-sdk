@@ -64,4 +64,7 @@ public class SendRequest {
 
     /** 预处理编码（仅会员）。 */
     private String pre;
+
+    /** push 表单编码；template 为 form 时必传。 */
+    private String pushId;
 }

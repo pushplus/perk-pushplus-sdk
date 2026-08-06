@@ -23,7 +23,9 @@ public enum Template {
     /** 路由器插件定制模板。 */
     ROUTE("route"),
     /** 支付成功通知模板。 */
-    PAY("pay");
+    PAY("pay"),
+    /** 表单格式模板；发送时需传 pushId（表单编码）。 */
+    FORM("form");
 
     private final String code;
 

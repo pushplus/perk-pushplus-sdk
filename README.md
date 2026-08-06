@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -64,6 +64,17 @@ client.send(SendRequest.builder()
         .channel(Channel.WECHAT)         // 默认就是 WECHAT，可省略
         .callbackUrl("https://you/cb")   // 异步回调
         .timestamp(System.currentTimeMillis() + 5000) // 时效控制
+        .build());
+```
+
+发送 push 表单消息时使用 `Template.FORM`，并传入表单编码 `pushId`：
+
+```java
+client.send(SendRequest.builder()
+        .title("表单通知")
+        .content("您有新的表单待填写")
+        .template(Template.FORM)
+        .pushId("表单编码")
         .build());
 ```
 

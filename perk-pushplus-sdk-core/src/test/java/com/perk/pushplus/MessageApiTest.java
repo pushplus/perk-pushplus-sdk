@@ -74,6 +74,46 @@ class MessageApiTest {
     }
 
     @Test
+    void send_form_template_should_serialize_push_id() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/send", 200,
+                        "{\"code\":200,\"msg\":\"请求成功\",\"data\":\"form123\"}");
+
+        PushPlusClient client = newClient(http);
+        String shortCode = client.send(SendRequest.builder()
+                .title("表单通知")
+                .content("您有新的表单待填写")
+                .template(Template.FORM)
+                .pushId("ES6kgrgG")
+                .build());
+
+        assertEquals("form123", shortCode);
+        var rec = http.getRecords().get(0);
+        assertTrue(rec.body().contains("\"template\":\"form\""));
+        assertTrue(rec.body().contains("\"pushId\":\"ES6kgrgG\""));
+    }
+
+    @Test
+    void batch_send_form_template_should_serialize_push_id() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/batchSend", 200,
+                        "{\"code\":200,\"msg\":\"执行成功\",\"data\":[" +
+                                "{\"shortCode\":\"a\",\"message\":\"ok\",\"code\":200,\"channel\":\"wechat\"}]}");
+        PushPlusClient client = newClient(http);
+
+        client.batchSend(BatchSendRequest.builder()
+                .content("表单摘要")
+                .template(Template.FORM)
+                .pushId("ES6kgrgG")
+                .channel(Channel.WECHAT).option("")
+                .build());
+
+        var rec = http.getRecords().get(0);
+        assertTrue(rec.body().contains("\"template\":\"form\""));
+        assertTrue(rec.body().contains("\"pushId\":\"ES6kgrgG\""));
+    }
+
+    @Test
     void batch_send_should_parse_response_list() {
         MockHttpRequester http = new MockHttpRequester()
                 .whenPath("/batchSend", 200,

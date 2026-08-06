@@ -50,12 +50,15 @@ public class BatchSendRequest {
     private String to;
     private String pre;
 
+    /** push 表单编码；template 为 form 时必传。 */
+    private String pushId;
+
     /** 复制当前对象的内容到一个新的 Builder（用于修改后再次 build）。 */
     public Builder toBuilder() {
         return new Builder()
                 .token(token).title(title).content(content).topic(topic).template(template)
                 .channelString(channel).optionString(option)
-                .callbackUrl(callbackUrl).timestamp(timestamp).to(to).pre(pre);
+                .callbackUrl(callbackUrl).timestamp(timestamp).to(to).pre(pre).pushId(pushId);
     }
 
     public static Builder builder() {
@@ -81,6 +84,7 @@ public class BatchSendRequest {
         private Long timestamp;
         private String to;
         private String pre;
+        private String pushId;
 
         private final List<Channel> channelList = new ArrayList<>();
         private final List<String> optionList = new ArrayList<>();
@@ -94,6 +98,7 @@ public class BatchSendRequest {
         public Builder timestamp(Long v) { this.timestamp = v; return this; }
         public Builder to(String v) { this.to = v; return this; }
         public Builder pre(String v) { this.pre = v; return this; }
+        public Builder pushId(String v) { this.pushId = v; return this; }
 
         /** 追加一个 channel。 */
         public Builder channel(Channel ch) { channelList.add(ch); return this; }
@@ -115,7 +120,7 @@ public class BatchSendRequest {
                     ? String.join(",", optionList)
                     : option;
             return new BatchSendRequest(token, title, content, topic, template,
-                    finalChannel, finalOption, callbackUrl, timestamp, to, pre);
+                    finalChannel, finalOption, callbackUrl, timestamp, to, pre, pushId);
         }
     }
 }
