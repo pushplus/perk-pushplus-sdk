@@ -16,7 +16,7 @@ class AccessKeyManagerTest {
                 .whenPath("/api/open/user/token", 200,
                         "{\"code\":200,\"msg\":\"ok\",\"data\":\"USER_TOKEN\"}")
                 .whenPath("/api/open/user/myInfo", 200,
-                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"nickName\":\"u\",\"token\":\"t\"}}");
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"nickName\":\"u\",\"token\":\"t\",\"vipInfo\":{\"isVip\":1,\"lastDay\":\"2026-12-31\"},\"verifyStatus\":1}}");
 
         PushPlusClient client = PushPlusClient.builder()
                 .config(PushPlusConfig.builder().token("u").secretKey("s").build())
@@ -28,6 +28,10 @@ class AccessKeyManagerTest {
 
         assertEquals("USER_TOKEN", t1);
         assertEquals("u", info.getNickName());
+        assertNotNull(info.getVipInfo());
+        assertEquals(1, info.getVipInfo().getIsVip());
+        assertEquals("2026-12-31", info.getVipInfo().getLastDay());
+        assertEquals(1, info.getVerifyStatus());
 
         long accessCalls = http.getRecords().stream()
                 .filter(r -> r.url().contains("/getAccessKey"))

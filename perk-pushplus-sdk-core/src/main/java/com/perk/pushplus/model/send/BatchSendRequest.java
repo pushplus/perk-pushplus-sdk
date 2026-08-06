@@ -50,7 +50,7 @@ public class BatchSendRequest {
     private String to;
     private String pre;
 
-    /** push 表单编码；template 为 form 时必传。 */
+    /** push 编码；template 为 form/doc/excel 时必传。 */
     private String pushId;
 
     /** 复制当前对象的内容到一个新的 Builder（用于修改后再次 build）。 */

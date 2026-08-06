@@ -25,7 +25,11 @@ public enum Template {
     /** 支付成功通知模板。 */
     PAY("pay"),
     /** 表单格式模板；发送时需传 pushId（表单编码）。 */
-    FORM("form");
+    FORM("form"),
+    /** 文档格式模板（push 文档）；发送时需传 pushId。 */
+    DOC("doc"),
+    /** 表格格式模板（push 表格）；发送时需传 pushId。 */
+    EXCEL("excel");
 
     private final String code;
 
