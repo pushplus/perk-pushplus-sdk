@@ -7,7 +7,7 @@
 - AccessKey **自动获取、缓存、过期前刷新、失效自动重试**，调用方无感知
 - **本地限流守卫**：发送接口命中 `code=900`（请求次数过多）时自动短路同 token 的后续调用，避免无效请求与账号进一步受限（[官方建议](https://www.pushplus.plus/doc/guide/code.html)）
 - 单条 `/send`、多渠道 `/batchSend`、消息回调（`message_complate` / `add_topic_user` / `add_friend`）类型化解析
-- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、功能设置、预处理、图片服务
+- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、功能设置、预处理、图片服务、push 表单、push 文档、push 表格
 - 完善的 Builder 模式与强类型枚举（`Channel`、`Template`、`SendStatus`、`WebhookType`、`CallbackEvent`、`ErrorCode`）
 
 ## 模块说明
@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.2.1</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.2.1</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -134,6 +134,27 @@ ImageUploadResult img = client.getImage().uploadFile(Path.of("logo.png"));
 String url = img.getUrl();   // 直接拿到可访问的图片地址
 PageResult<ImageItem> imgs = client.getImage().list(PageQuery.of(1, 10));
 client.getImage().delete(imgs.getList().get(0).getId());
+
+// push 表单
+FormListItem form = client.getForm().create("用户满意度调查");
+client.getForm().save(FormSaveRequest.builder()
+        .id(form.getId())
+        .title("用户满意度调查")
+        .items(List.of(Map.of("id", "q_name", "type", "input", "label", "您的姓名", "required", true)))
+        .build());
+FormPublishResult published = client.getForm().publish(form.getId());
+
+// push 文档
+DocVo doc = client.getDoc().create("本周工作同步");
+client.getDoc().saveContent(doc.getDocCode(), "<h1>本周工作同步</h1><p>需求评审。</p>");
+client.getDoc().updateShare(doc.getDocCode(), 1, 0);
+client.getDoc().publish(doc.getDocCode());
+
+// push 表格
+ExcelVo sheet = client.getExcel().create("销售日报");
+client.getExcel().writeCells(sheet.getDocCode(), "A1",
+        List.of(List.of("日期", "销售额"), List.of("2026-08-13", 12800)), "Sheet1");
+client.getExcel().publish(sheet.getDocCode());
 ```
 
 各 API 一览：
@@ -154,6 +175,9 @@ client.getImage().delete(imgs.getList().get(0).getId());
 | `client.getFriend()` | 十 好友功能接口 |
 | `client.getPre()` | 十一 预处理信息接口 |
 | `client.getImage()` | 十二 图片服务接口 |
+| `client.getForm()` | push 表单开放接口 |
+| `client.getDoc()` | push 文档开放接口 |
+| `client.getExcel()` | push 表格开放接口 |
 
 ## 图片服务
 

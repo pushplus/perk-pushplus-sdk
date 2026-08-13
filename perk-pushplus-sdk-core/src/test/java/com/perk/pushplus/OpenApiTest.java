@@ -77,5 +77,57 @@ class OpenApiTest {
         assertFalse(ex.getMessage().contains("Cannot construct instance"),
                 "不应再出现 Jackson 反序列化错误: " + ex.getMessage());
     }
+
+    @Test
+    void form_create_save_publish() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/push/api/open/form/create", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"id\":10001,\"title\":\"用户满意度调查\",\"status\":0}}")
+                .whenPath("/push/api/open/form/save", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/push/api/open/form/publish", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"id\":10001,\"formCode\":\"a1b2c3d4\",\"status\":1}}");
+
+        PushPlusClient c = client(http);
+        var created = c.getForm().create("用户满意度调查");
+        assertEquals(10001L, created.getId());
+        c.getForm().save(com.perk.pushplus.model.open.form.FormSaveRequest.builder()
+                .id(10001L)
+                .title("用户满意度调查")
+                .items(java.util.List.of(java.util.Map.of("id", "q1", "type", "input", "label", "姓名")))
+                .build());
+        var published = c.getForm().publish(10001L);
+        assertEquals("a1b2c3d4", published.getFormCode());
+
+        var saveReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/push/api/open/form/save"))
+                .findFirst().orElseThrow();
+        assertTrue(saveReq.body().contains("\"q1\""), saveReq.body());
+        var publishReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/push/api/open/form/publish"))
+                .findFirst().orElseThrow();
+        assertTrue(publishReq.url().contains("id=10001"), publishReq.url());
+    }
+
+    @Test
+    void excel_save_content_serializes_object() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/push/api/open/excel/saveContent", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"docCode\":\"Sh3xY7kP\",\"publishDirty\":true}}");
+
+        PushPlusClient c = client(http);
+        var vo = c.getExcel().saveContent("Sh3xY7kP", java.util.Map.of("sheetOrder", java.util.List.of("sheet-1")));
+        assertEquals("Sh3xY7kP", vo.getDocCode());
+
+        var saveReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/push/api/open/excel/saveContent"))
+                .findFirst().orElseThrow();
+        assertTrue(saveReq.body().contains("sheetOrder"), saveReq.body());
+        assertTrue(saveReq.body().contains("\\\"sheet-1\\\"") || saveReq.body().contains("sheet-1"),
+                saveReq.body());
+    }
 }
 

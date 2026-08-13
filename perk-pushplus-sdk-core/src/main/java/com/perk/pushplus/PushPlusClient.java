@@ -4,6 +4,9 @@ import com.perk.pushplus.access.AccessKeyManager;
 import com.perk.pushplus.api.AccessKeyApi;
 import com.perk.pushplus.api.ChannelApi;
 import com.perk.pushplus.api.ClawBotApi;
+import com.perk.pushplus.api.DocApi;
+import com.perk.pushplus.api.ExcelApi;
+import com.perk.pushplus.api.FormApi;
 import com.perk.pushplus.api.FriendApi;
 import com.perk.pushplus.api.ImageApi;
 import com.perk.pushplus.api.MessageApi;
@@ -70,6 +73,9 @@ public class PushPlusClient {
     @Getter private final SettingApi setting;
     @Getter private final PreApi pre;
     @Getter private final ImageApi image;
+    @Getter private final FormApi form;
+    @Getter private final DocApi doc;
+    @Getter private final ExcelApi excel;
 
     private PushPlusClient(PushPlusConfig config, HttpRequester httpRequester) {
         if (config == null) {
@@ -95,6 +101,9 @@ public class PushPlusClient {
         this.setting = new SettingApi(this.config, this.httpRequester, this.accessKeyManager);
         this.pre = new PreApi(this.config, this.httpRequester, this.accessKeyManager);
         this.image = new ImageApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.form = new FormApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.doc = new DocApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.excel = new ExcelApi(this.config, this.httpRequester, this.accessKeyManager);
     }
 
     /* =========================== 工厂 / Builder =========================== */
