@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.1</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.3.0</version>
+    <version>1.3.1</version>
 </dependency>
 ```
 
@@ -67,7 +67,7 @@ client.send(SendRequest.builder()
         .build());
 ```
 
-发送 push 表单消息时使用 `Template.FORM`，并传入表单编码 `pushId`：
+发送 push 表单 / 文档 / 表格时使用对应 `template`，并传入编码 `pushId`：
 
 ```java
 client.send(SendRequest.builder()
@@ -75,6 +75,18 @@ client.send(SendRequest.builder()
         .content("您有新的表单待填写")
         .template(Template.FORM)
         .pushId("表单编码")
+        .build());
+client.send(SendRequest.builder()
+        .title("本周工作同步")
+        .content("请查收")
+        .template(Template.DOC)
+        .pushId("文档编码")
+        .build());
+client.send(SendRequest.builder()
+        .title("销售日报")
+        .content("请查收")
+        .template(Template.EXCEL)
+        .pushId("表格编码")
         .build());
 ```
 
@@ -117,6 +129,11 @@ SendMessageResult r = client.getOpenMessage().queryResult(shortCode);
 // 群组
 PageResult<TopicItem> topics = client.getTopic().list(TopicListQuery.of(1, 20, 0));
 TopicQrCode qr = client.getTopic().qrCode(/*topicId*/ 1, /*second*/ 86400, /*scanCount*/ -1);
+client.getTopicUser().addBlacklist(/*topicRelationId*/ 10);
+PageResult<TopicUserBlacklistItem> topicBlacklist =
+        client.getTopicUser().blacklistList(TopicUserListQuery.of(1, 20, /*topicId*/ 1));
+client.getFriend().addBlacklist(/*friendId*/ 1322);
+PageResult<FriendBlacklistItem> friendBlacklist = client.getFriend().blacklistList(PageQuery.of(1, 20));
 
 // Webhook 渠道配置
 client.getWebhook().add(WebhookSaveRequest.builder()
@@ -143,18 +160,37 @@ client.getForm().save(FormSaveRequest.builder()
         .items(List.of(Map.of("id", "q_name", "type", "input", "label", "您的姓名", "required", true)))
         .build());
 FormPublishResult published = client.getForm().publish(form.getId());
+// 推送填写页：template=form，pushId=formCode
+client.send(SendRequest.builder()
+        .title(published.getTitle())
+        .content("请花1分钟完成填写")
+        .template(Template.FORM)
+        .pushId(published.getFormCode())
+        .build());
 
 // push 文档
-DocVo doc = client.getDoc().create("本周工作同步");
-client.getDoc().saveContent(doc.getDocCode(), "<h1>本周工作同步</h1><p>需求评审。</p>");
+DocVo doc = client.getDoc().importWord(Path.of("本周工作同步.docx"));
 client.getDoc().updateShare(doc.getDocCode(), 1, 0);
 client.getDoc().publish(doc.getDocCode());
+// 推送分享页：template=doc，pushId=docCode
+client.send(SendRequest.builder()
+        .title(doc.getTitle())
+        .content("请查收")
+        .template(Template.DOC)
+        .pushId(doc.getDocCode())
+        .build());
 
 // push 表格
-ExcelVo sheet = client.getExcel().create("销售日报");
+ExcelVo sheet = client.getExcel().importExcel(Path.of("销售日报.xlsx"));
 client.getExcel().writeCells(sheet.getDocCode(), "A1",
         List.of(List.of("日期", "销售额"), List.of("2026-08-13", 12800)), "Sheet1");
 client.getExcel().publish(sheet.getDocCode());
+client.send(SendRequest.builder()
+        .title(sheet.getTitle())
+        .content("请查收")
+        .template(Template.EXCEL)
+        .pushId(sheet.getDocCode())
+        .build());
 ```
 
 各 API 一览：

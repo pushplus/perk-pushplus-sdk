@@ -3,7 +3,9 @@ package com.perk.pushplus.api;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.perk.pushplus.access.AccessKeyManager;
 import com.perk.pushplus.config.PushPlusConfig;
+import com.perk.pushplus.exception.PushPlusException;
 import com.perk.pushplus.http.HttpRequester;
+import com.perk.pushplus.http.MultipartBody;
 import com.perk.pushplus.json.JsonMapper;
 import com.perk.pushplus.model.ApiResponse;
 import com.perk.pushplus.model.PageResult;
@@ -12,6 +14,9 @@ import com.perk.pushplus.model.open.doc.DocListQuery;
 import com.perk.pushplus.model.open.excel.ExcelContent;
 import com.perk.pushplus.model.open.excel.ExcelVo;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +26,8 @@ import java.util.Map;
  *
  * <p>文档：https://www.pushplus.plus/doc/ecosystem/sheet/</p>
  * <p>基础路径：{@code /push/api/open/excel}</p>
+ * <p>表格开放接口不单独提供推送接口。发布后请通过 {@link MessageApi} 推送分享页：
+ * {@code template=excel}，{@code pushId=docCode}。</p>
  */
 public class ExcelApi extends OpenAbstractApi {
 
@@ -46,6 +53,37 @@ public class ExcelApi extends OpenAbstractApi {
     /** 创建空白表格。 */
     public ExcelVo create(String title) {
         return executeOpen("POST", "/push/api/open/excel/create", Map.of("title", title), VO);
+    }
+
+    /**
+     * 导入 Excel（.xlsx / .xls）创建表格。
+     *
+     * <p>标题默认取文件名；创建后默认关闭分享，需再调用 {@link #publish(String)} 才会同步到分享页。</p>
+     */
+    public ExcelVo importExcel(Path filePath) {
+        if (filePath == null) {
+            throw new PushPlusException("上传文件路径不能为 null");
+        }
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            throw new PushPlusException("读取上传文件失败: " + e.getMessage(), e);
+        }
+        String fileName = filePath.getFileName() == null ? "workbook.xlsx" : filePath.getFileName().toString();
+        return importExcel(bytes, fileName);
+    }
+
+    /**
+     * 导入 Excel（.xlsx / .xls）创建表格。
+     *
+     * @param fileBytes 文件二进制，不超过 2MB
+     * @param fileName  文件名（建议带 .xlsx / .xls 扩展名）
+     */
+    public ExcelVo importExcel(byte[] fileBytes, String fileName) {
+        String name = (fileName == null || fileName.isBlank()) ? "workbook.xlsx" : fileName;
+        MultipartBody mp = MultipartBody.file(name, guessExcelContentType(name), fileBytes);
+        return executeOpenMultipart("/push/api/open/excel/import", mp, VO);
     }
 
     /** 获取表格元信息与整表 JSON 草稿。 */
@@ -127,5 +165,16 @@ public class ExcelApi extends OpenAbstractApi {
             return (String) content;
         }
         return JsonMapper.toJson(content);
+    }
+
+    private static String guessExcelContentType(String name) {
+        String lower = name == null ? "" : name.toLowerCase();
+        if (lower.endsWith(".xlsx")) {
+            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        }
+        if (lower.endsWith(".xls")) {
+            return "application/vnd.ms-excel";
+        }
+        return "application/octet-stream";
     }
 }

@@ -8,6 +8,7 @@ import com.perk.pushplus.model.PageResult;
 import com.perk.pushplus.model.open.message.MessageItem;
 import com.perk.pushplus.model.open.message.SendMessageResult;
 import com.perk.pushplus.model.open.topic.TopicListQuery;
+import com.perk.pushplus.model.open.topic.TopicUserListQuery;
 import com.perk.pushplus.test.MockHttpRequester;
 import org.junit.jupiter.api.Test;
 
@@ -128,6 +129,105 @@ class OpenApiTest {
         assertTrue(saveReq.body().contains("sheetOrder"), saveReq.body());
         assertTrue(saveReq.body().contains("\\\"sheet-1\\\"") || saveReq.body().contains("sheet-1"),
                 saveReq.body());
+    }
+
+    @Test
+    void friend_and_topic_user_blacklist() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/api/open/friend/addBlacklist", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/friend/blacklistList", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"pageNum\":1,\"pageSize\":20,\"total\":1,\"pages\":1,\"list\":[" +
+                                "{\"id\":4,\"friendId\":1322,\"nickName\":\"昵称\",\"createTime\":\"2026-08-17 10:00:00\"}]}}")
+                .whenPath("/api/open/friend/removeBlacklist", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/topicUser/addBlacklist", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/topicUser/blacklistList", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"pageNum\":1,\"pageSize\":20,\"total\":1,\"pages\":1,\"list\":[" +
+                                "{\"id\":1,\"userId\":1322,\"nickName\":\"昵称\",\"openId\":\"o0a\"}]}}")
+                .whenPath("/api/open/topicUser/removeBlacklist", 200, "{\"code\":200,\"msg\":\"ok\"}");
+
+        PushPlusClient c = client(http);
+        c.getFriend().addBlacklist(1322L);
+        var friends = c.getFriend().blacklistList(PageQuery.of(1, 20));
+        assertEquals(4L, friends.getList().get(0).getId());
+        assertEquals(1322L, friends.getList().get(0).getFriendId());
+        c.getFriend().removeBlacklist(4L);
+
+        c.getTopicUser().addBlacklist(10L);
+        var users = c.getTopicUser().blacklistList(TopicUserListQuery.of(1, 20, 100L));
+        assertEquals(1L, users.getList().get(0).getId());
+        c.getTopicUser().removeBlacklist(1L);
+
+        var friendAdd = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/friend/addBlacklist"))
+                .findFirst().orElseThrow();
+        assertTrue(friendAdd.url().contains("friendId=1322"), friendAdd.url());
+        var topicAdd = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/topicUser/addBlacklist"))
+                .findFirst().orElseThrow();
+        assertTrue(topicAdd.url().contains("topicRelationId=10"), topicAdd.url());
+        var topicList = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/topicUser/blacklistList"))
+                .findFirst().orElseThrow();
+        assertTrue(topicList.body().contains("\"topicId\":100"), topicList.body());
+    }
+
+    @Test
+    void form_list_uses_current_and_params() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/push/api/open/form/list", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"pageNum\":1,\"pageSize\":20,\"total\":0,\"pages\":0,\"list\":[]}}");
+
+        client(http).getForm().list(com.perk.pushplus.model.open.form.FormListQuery.of(1, 20, "满意度", 1));
+
+        var listReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/push/api/open/form/list"))
+                .findFirst().orElseThrow();
+        assertTrue(listReq.body().contains("\"current\":1"), listReq.body());
+        assertTrue(listReq.body().contains("\"keyword\":\"满意度\""), listReq.body());
+        assertTrue(listReq.body().contains("\"status\":1"), listReq.body());
+    }
+
+    @Test
+    void doc_import() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/push/api/open/doc/import", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"docCode\":\"Ab3xY7kP\",\"title\":\"本周工作同步\"}}");
+
+        PushPlusClient c = client(http);
+        var imported = c.getDoc().importWord("hello".getBytes(java.nio.charset.StandardCharsets.UTF_8), "本周工作同步.docx");
+        assertEquals("Ab3xY7kP", imported.getDocCode());
+
+        var importReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/push/api/open/doc/import"))
+                .findFirst().orElseThrow();
+        assertTrue(importReq.headers().get("Content-Type").startsWith("multipart/form-data; boundary="),
+                importReq.headers().get("Content-Type"));
+        assertTrue(importReq.body().contains("filename=\"本周工作同步.docx\""), importReq.body());
+    }
+
+    @Test
+    void excel_import() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/push/api/open/excel/import", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"docCode\":\"Sh3xY7kP\",\"title\":\"销售日报\"}}");
+
+        PushPlusClient c = client(http);
+        var imported = c.getExcel().importExcel("xlsx".getBytes(java.nio.charset.StandardCharsets.UTF_8), "销售日报.xlsx");
+        assertEquals("Sh3xY7kP", imported.getDocCode());
+
+        var importReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/push/api/open/excel/import"))
+                .findFirst().orElseThrow();
+        assertTrue(importReq.headers().get("Content-Type").startsWith("multipart/form-data"),
+                String.valueOf(importReq.headers().get("Content-Type")));
     }
 }
 

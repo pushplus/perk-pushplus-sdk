@@ -3,7 +3,9 @@ package com.perk.pushplus.api;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.perk.pushplus.access.AccessKeyManager;
 import com.perk.pushplus.config.PushPlusConfig;
+import com.perk.pushplus.exception.PushPlusException;
 import com.perk.pushplus.http.HttpRequester;
+import com.perk.pushplus.http.MultipartBody;
 import com.perk.pushplus.model.ApiResponse;
 import com.perk.pushplus.model.PageResult;
 import com.perk.pushplus.model.open.doc.DocContent;
@@ -11,6 +13,9 @@ import com.perk.pushplus.model.open.doc.DocListItem;
 import com.perk.pushplus.model.open.doc.DocListQuery;
 import com.perk.pushplus.model.open.doc.DocVo;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -19,6 +24,8 @@ import java.util.Map;
  *
  * <p>文档：https://www.pushplus.plus/doc/ecosystem/doc/</p>
  * <p>基础路径：{@code /push/api/open/doc}</p>
+ * <p>文档开放接口不单独提供推送接口。发布后请通过 {@link MessageApi} 推送分享页：
+ * {@code template=doc}，{@code pushId=docCode}。</p>
  */
 public class DocApi extends OpenAbstractApi {
 
@@ -44,6 +51,37 @@ public class DocApi extends OpenAbstractApi {
     /** 创建空白文档。 */
     public DocVo create(String title) {
         return executeOpen("POST", "/push/api/open/doc/create", Map.of("title", title), VO);
+    }
+
+    /**
+     * 导入 Word（.docx）创建文档。
+     *
+     * <p>标题默认取文件名；创建后默认关闭分享，需再调用 {@link #publish(String)} 才会同步到分享页。</p>
+     */
+    public DocVo importWord(Path filePath) {
+        if (filePath == null) {
+            throw new PushPlusException("上传文件路径不能为 null");
+        }
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            throw new PushPlusException("读取上传文件失败: " + e.getMessage(), e);
+        }
+        String fileName = filePath.getFileName() == null ? "document.docx" : filePath.getFileName().toString();
+        return importWord(bytes, fileName);
+    }
+
+    /**
+     * 导入 Word（.docx）创建文档。
+     *
+     * @param fileBytes 文件二进制，仅支持 .docx，不超过 2MB
+     * @param fileName  文件名（建议带 .docx 扩展名）
+     */
+    public DocVo importWord(byte[] fileBytes, String fileName) {
+        String name = (fileName == null || fileName.isBlank()) ? "document.docx" : fileName;
+        MultipartBody mp = MultipartBody.file(name, guessDocxContentType(name), fileBytes);
+        return executeOpenMultipart("/push/api/open/doc/import", mp, VO);
     }
 
     /** 获取文档元信息与 HTML 草稿正文。 */
@@ -93,5 +131,13 @@ public class DocApi extends OpenAbstractApi {
             body.put("shareLogin", shareLogin);
         }
         return executeOpen("POST", "/push/api/open/doc/updateShare", body, VO);
+    }
+
+    private static String guessDocxContentType(String name) {
+        String lower = name == null ? "" : name.toLowerCase();
+        if (lower.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        }
+        return "application/octet-stream";
     }
 }

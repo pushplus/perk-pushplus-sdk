@@ -84,7 +84,21 @@ public abstract class AbstractApi {
         String url = resolveUrl(path);
         String json = body == null ? null : JsonMapper.toJson(body);
         HttpResponse resp = http.execute(method, url, headers, json);
+        return parseHttpResponse(resp, typeRef);
+    }
 
+    /**
+     * 执行带二进制请求体的请求并返回原始 {@link ApiResponse}（不进行 code 校验）。
+     * 用于 multipart 上传等场景。
+     */
+    protected <T> ApiResponse<T> executeRaw(String method, String path, Map<String, String> headers,
+                                            byte[] body, TypeReference<ApiResponse<T>> typeRef) {
+        String url = resolveUrl(path);
+        HttpResponse resp = http.executeRaw(method, url, headers, body);
+        return parseHttpResponse(resp, typeRef);
+    }
+
+    private <T> ApiResponse<T> parseHttpResponse(HttpResponse resp, TypeReference<ApiResponse<T>> typeRef) {
         if (!resp.isSuccessful()) {
             throw new PushPlusException(resp.getStatusCode(),
                     "PushPlus 接口 HTTP 调用失败: status=" + resp.getStatusCode() + ", body=" + resp.getBody());

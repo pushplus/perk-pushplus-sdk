@@ -5,6 +5,7 @@ import com.perk.pushplus.access.AccessKeyManager;
 import com.perk.pushplus.config.PushPlusConfig;
 import com.perk.pushplus.exception.PushPlusException;
 import com.perk.pushplus.http.HttpRequester;
+import com.perk.pushplus.http.MultipartBody;
 import com.perk.pushplus.model.ApiResponse;
 
 import java.util.LinkedHashMap;
@@ -47,6 +48,49 @@ public abstract class OpenAbstractApi extends AbstractApi {
             accessKeyManager.invalidate();
             Map<String, String> retryHeaders = headersWithAccessKey();
             ApiResponse<T> retry = execute(method, path, retryHeaders, body, typeRef);
+            if (retry.isSuccess()) {
+                return retry.getData();
+            }
+            throw new PushPlusException(retry.getCode() == null ? -1 : retry.getCode(),
+                    "PushPlus 开放接口业务失败(重试后): code=" + retry.getCode() + ", msg=" + retry.getMsg());
+        }
+        throw new PushPlusException(resp.getCode() == null ? -1 : resp.getCode(),
+                "PushPlus 开放接口业务失败: code=" + resp.getCode() + ", msg=" + resp.getMsg());
+    }
+
+    /**
+     * 以 multipart 上传文件（自动携带 access-key；code=401 时刷新后重试一次）。
+     */
+    protected <T> T executeOpenMultipart(String path, MultipartBody multipart,
+                                         TypeReference<ApiResponse<T>> typeRef) {
+        if (multipart == null) {
+            throw new PushPlusException("multipart 请求体不能为空");
+        }
+        Map<String, String> extra = new LinkedHashMap<>();
+        extra.put("Content-Type", multipart.getContentType());
+        return executeOpenRaw("POST", path, extra, multipart.getBody(), typeRef);
+    }
+
+    /**
+     * 执行带二进制 body 的开放接口请求；当返回 code=401 时自动刷新 key 并重试一次。
+     */
+    protected <T> T executeOpenRaw(String method, String path, Map<String, String> extraHeaders,
+                                   byte[] body, TypeReference<ApiResponse<T>> typeRef) {
+        Map<String, String> headers = headersWithAccessKey();
+        if (extraHeaders != null) {
+            headers.putAll(extraHeaders);
+        }
+        ApiResponse<T> resp = executeRaw(method, path, headers, body, typeRef);
+        if (resp.isSuccess()) {
+            return resp.getData();
+        }
+        if (resp.getCode() != null && resp.getCode() == CODE_ACCESS_KEY_INVALID) {
+            accessKeyManager.invalidate();
+            Map<String, String> retryHeaders = headersWithAccessKey();
+            if (extraHeaders != null) {
+                retryHeaders.putAll(extraHeaders);
+            }
+            ApiResponse<T> retry = executeRaw(method, path, retryHeaders, body, typeRef);
             if (retry.isSuccess()) {
                 return retry.getData();
             }

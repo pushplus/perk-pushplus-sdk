@@ -20,6 +20,8 @@ import java.util.Map;
  *
  * <p>文档：https://www.pushplus.plus/doc/ecosystem/form/</p>
  * <p>基础路径：{@code /push/api/open/form}</p>
+ * <p>表单开放接口不单独提供推送接口。发布后请通过 {@link MessageApi} 推送填写页：
+ * {@code template=form}，{@code pushId=formCode}。</p>
  */
 public class FormApi extends OpenAbstractApi {
 
