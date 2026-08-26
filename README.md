@@ -7,7 +7,7 @@
 - AccessKey **自动获取、缓存、过期前刷新、失效自动重试**，调用方无感知
 - **本地限流守卫**：发送接口命中 `code=900`（请求次数过多）时自动短路同 token 的后续调用，避免无效请求与账号进一步受限（[官方建议](https://www.pushplus.plus/doc/guide/code.html)）
 - 单条 `/send`、多渠道 `/batchSend`、消息回调（`message_complate` / `add_topic_user` / `add_friend`）类型化解析
-- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、功能设置、预处理、图片服务、push 表单、push 文档、push 表格
+- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、QQ 机器人、功能设置、预处理、图片服务、push 表单、push 文档、push 表格
 - 完善的 Builder 模式与强类型枚举（`Channel`、`Template`、`SendStatus`、`WebhookType`、`CallbackEvent`、`ErrorCode`）
 
 ## 模块说明
@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.3.1</version>
+    <version>1.3.2</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.3.1</version>
+    <version>1.3.2</version>
 </dependency>
 ```
 
@@ -143,6 +143,23 @@ client.getWebhook().add(WebhookSaveRequest.builder()
         .webhookUrl("https://api.day.app/xxxx")
         .build());
 
+// QQ 机器人：绑定 -> 认领群 -> 建配置 -> 发到群
+QqBotBindLink link = client.getQqBot().getBindLink();   // link.getUrl() 生成二维码，或私聊发送 link.getBindCode()
+QqBotBindInfo bind = client.getQqBot().botInfo();       // isBind == 1 表示已绑定
+List<QqGroupItem> qqGroups = client.getQqBot().groupList();
+client.getQqBot().add(QqBotSaveRequest.builder()
+        .qqName("运维告警群")
+        .qqCode("ops-group")
+        .qqGroupId(qqGroups.get(0).getId())
+        .build());
+client.send(SendRequest.builder()
+        .title("服务告警")
+        .content("订单服务响应超时")
+        .channel(Channel.QQ)
+        .option("ops-group")   // 不传 option 则发给自己
+        .template(Template.TXT)
+        .build());
+
 // 功能设置
 client.getSetting().changeIsSend(1);
 
@@ -207,10 +224,11 @@ client.send(SendRequest.builder()
 | `client.getWebhook()` | 七 渠道配置 - webhook |
 | `client.getChannel()` | 七 渠道配置 - 公众号/企业微信/邮箱 |
 | `client.getClawBot()` | 八 微信 ClawBot 接口 |
-| `client.getSetting()` | 九 功能设置接口 |
-| `client.getFriend()` | 十 好友功能接口 |
-| `client.getPre()` | 十一 预处理信息接口 |
-| `client.getImage()` | 十二 图片服务接口 |
+| `client.getQqBot()` | 九 QQ 机器人接口 |
+| `client.getSetting()` | 十 功能设置接口 |
+| `client.getFriend()` | 十一 好友功能接口 |
+| `client.getPre()` | 十二 预处理信息接口 |
+| `client.getImage()` | 十三 图片服务接口 |
 | `client.getForm()` | push 表单开放接口 |
 | `client.getDoc()` | push 文档开放接口 |
 | `client.getExcel()` | push 表格开放接口 |

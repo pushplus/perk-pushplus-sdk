@@ -13,6 +13,7 @@ import com.perk.pushplus.api.MessageApi;
 import com.perk.pushplus.api.MessageTokenApi;
 import com.perk.pushplus.api.OpenMessageApi;
 import com.perk.pushplus.api.PreApi;
+import com.perk.pushplus.api.QqBotApi;
 import com.perk.pushplus.api.SettingApi;
 import com.perk.pushplus.api.TopicApi;
 import com.perk.pushplus.api.TopicUserApi;
@@ -70,6 +71,7 @@ public class PushPlusClient {
     @Getter private final WebhookApi webhook;
     @Getter private final ChannelApi channel;
     @Getter private final ClawBotApi clawBot;
+    @Getter private final QqBotApi qqBot;
     @Getter private final SettingApi setting;
     @Getter private final PreApi pre;
     @Getter private final ImageApi image;
@@ -98,6 +100,7 @@ public class PushPlusClient {
         this.webhook = new WebhookApi(this.config, this.httpRequester, this.accessKeyManager);
         this.channel = new ChannelApi(this.config, this.httpRequester, this.accessKeyManager);
         this.clawBot = new ClawBotApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.qqBot = new QqBotApi(this.config, this.httpRequester, this.accessKeyManager);
         this.setting = new SettingApi(this.config, this.httpRequester, this.accessKeyManager);
         this.pre = new PreApi(this.config, this.httpRequester, this.accessKeyManager);
         this.image = new ImageApi(this.config, this.httpRequester, this.accessKeyManager);

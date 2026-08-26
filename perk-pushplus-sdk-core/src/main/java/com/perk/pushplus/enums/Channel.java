@@ -27,7 +27,9 @@ public enum Channel {
     /** App 渠道（安卓/鸿蒙/iOS）。 */
     APP("app", "App"),
     /** 微信 ClawBot。 */
-    CLAWBOT("clawbot", "微信ClawBot");
+    CLAWBOT("clawbot", "微信ClawBot"),
+    /** QQ 机器人；不带 option 发给自己，option 填配置编码则发到对应 QQ 群。 */
+    QQ("qq", "QQ机器人");
 
     private final String code;
     private final String description;

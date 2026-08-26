@@ -13,4 +13,5 @@ public class SendCount {
     private Integer cpSendCount;
     private Integer webhookSendCount;
     private Integer mailSendCount;
+    private Integer qqBotSendCount;
 }

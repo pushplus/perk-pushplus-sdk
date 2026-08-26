@@ -229,5 +229,65 @@ class OpenApiTest {
         assertTrue(importReq.headers().get("Content-Type").startsWith("multipart/form-data"),
                 String.valueOf(importReq.headers().get("Content-Type")));
     }
+
+    @Test
+    void qq_bot_bind_and_group_config() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/api/open/qqBot/getBindLink", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"url\":\"https://qun.qq.com/qunpro/robot/share?robot_appid=1\"," +
+                                "\"bindCode\":\"A1B2C3\",\"expireSeconds\":300,\"botName\":\"pushplus\"}}")
+                .whenPath("/api/open/qqBot/botInfo", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"isBind\":1,\"receiveStatus\":1," +
+                                "\"botInfo\":{\"appId\":\"1\",\"username\":\"pushplus\"}}}")
+                .whenPath("/api/open/qqBot/groupList", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":[{\"id\":9,\"groupOpenId\":\"OPEN-1\",\"status\":1," +
+                                "\"groupName\":\"运维告警群\",\"groupTags\":[\"运维\"],\"groupMemberNum\":128}]}")
+                .whenPath("/api/open/qqBot/add", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/qqBot/list", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"pageNum\":1,\"pageSize\":20,\"total\":1,\"pages\":1,\"list\":[" +
+                                "{\"id\":3,\"qqName\":\"运维告警群\",\"qqCode\":\"ops-group\",\"sendType\":2,\"qqGroupId\":9}]}}")
+                .whenPath("/api/open/qqBot/delete", 200, "{\"code\":200,\"msg\":\"ok\"}");
+
+        PushPlusClient c = client(http);
+
+        var link = c.getQqBot().getBindLink(true);
+        assertEquals("A1B2C3", link.getBindCode());
+        assertEquals(300, link.getExpireSeconds());
+        var linkReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/getBindLink"))
+                .findFirst().orElseThrow();
+        assertTrue(linkReq.url().contains("refresh=true"), linkReq.url());
+
+        var bind = c.getQqBot().botInfo();
+        assertEquals(1, bind.getIsBind());
+        assertEquals("pushplus", bind.getBotInfo().getUsername());
+
+        var groups = c.getQqBot().groupList();
+        assertEquals(9L, groups.get(0).getId());
+        assertEquals(java.util.List.of("运维"), groups.get(0).getGroupTags());
+
+        c.getQqBot().add(com.perk.pushplus.model.open.qq.QqBotSaveRequest.builder()
+                .qqName("运维告警群")
+                .qqCode("ops-group")
+                .qqGroupId(9L)
+                .build());
+        var addReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/add"))
+                .findFirst().orElseThrow();
+        assertTrue(addReq.body().contains("\"sendType\":2"), addReq.body());
+        assertTrue(addReq.body().contains("\"qqGroupId\":9"), addReq.body());
+
+        var page = c.getQqBot().list(PageQuery.of(1, 20));
+        assertEquals("ops-group", page.getList().get(0).getQqCode());
+
+        c.getQqBot().delete(3L);
+        var deleteReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/delete"))
+                .findFirst().orElseThrow();
+        assertEquals("DELETE", deleteReq.method());
+        assertTrue(deleteReq.url().contains("id=3"), deleteReq.url());
+    }
 }
 
