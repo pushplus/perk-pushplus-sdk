@@ -289,5 +289,70 @@ class OpenApiTest {
         assertEquals("DELETE", deleteReq.method());
         assertTrue(deleteReq.url().contains("id=3"), deleteReq.url());
     }
+
+    @Test
+    void forward_rule_and_log() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/api/open/forwardRule/list", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"pageNum\":1,\"list\":[{\"id\":1,\"ruleName\":\"阿里云监控多渠道\",\"sourceType\":1}]}}")
+                .whenPath("/api/open/forwardRule/add", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/forwardRule/test", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"matched\":true,\"title\":\"ECS-内存使用率\"}}")
+                .whenPath("/api/open/forwardRule/setting?mode=1", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/forwardRule/setting", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"mode\":1}}")
+                .whenPath("/api/open/forwardLog/list", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"pageNum\":1,\"list\":[{\"id\":9,\"ruleId\":1,\"matchResult\":1}]}}")
+                .whenPath("/api/open/forwardLog/detail", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"id\":9,\"ruleId\":1,\"requestBody\":\"{\\\"alertState\\\":\\\"ALERT\\\"}\"}}");
+
+        PushPlusClient c = client(http);
+        var page = c.getForwardRule().list(PageQuery.of(1, 20));
+        assertEquals("阿里云监控多渠道", page.getList().get(0).getRuleName());
+
+        c.getForwardRule().add(com.perk.pushplus.model.open.forward.ForwardRuleSaveRequest.builder()
+                .ruleName("阿里云监控多渠道")
+                .tokenId(-1L)
+                .sourceType(1)
+                .variables(java.util.List.of(com.perk.pushplus.model.open.forward.ForwardVariable.builder()
+                        .varName("alertState")
+                        .sourceType(3)
+                        .extractType(1)
+                        .extractKey("alertState")
+                        .build()))
+                .build());
+        var tested = c.getForwardRule().test(com.perk.pushplus.model.open.forward.ForwardRuleTestRequest.builder()
+                .sourceType(1)
+                .body("{\"alertState\":\"ALERT\"}")
+                .conditionExpr("alertState == 'ALERT'")
+                .build());
+        assertEquals(Boolean.TRUE, tested.getMatched());
+        c.getForwardRule().saveSetting(1);
+        assertEquals(1, c.getForwardRule().getSetting().getMode());
+
+        var logs = c.getForwardLog().list(
+                com.perk.pushplus.model.open.forward.ForwardLogListQuery.of(1, 20, 1L, 1));
+        assertEquals(9L, logs.getList().get(0).getId());
+        assertTrue(c.getForwardLog().detail(9L).getRequestBody().contains("ALERT"));
+
+        var addReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/forwardRule/add"))
+                .findFirst().orElseThrow();
+        assertTrue(addReq.body().contains("\"tokenId\":-1"), addReq.body());
+        var saveSetting = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/forwardRule/setting?mode=1"))
+                .findFirst().orElseThrow();
+        assertEquals("GET", saveSetting.method());
+        var logList = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/forwardLog/list"))
+                .findFirst().orElseThrow();
+        assertTrue(logList.body().contains("\"matchResult\":1"), logList.body());
+        var logDetail = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/forwardLog/detail"))
+                .findFirst().orElseThrow();
+        assertTrue(logDetail.url().contains("logId=9"), logDetail.url());
+    }
 }
 

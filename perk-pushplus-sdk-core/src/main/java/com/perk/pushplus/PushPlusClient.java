@@ -7,6 +7,8 @@ import com.perk.pushplus.api.ClawBotApi;
 import com.perk.pushplus.api.DocApi;
 import com.perk.pushplus.api.ExcelApi;
 import com.perk.pushplus.api.FormApi;
+import com.perk.pushplus.api.ForwardLogApi;
+import com.perk.pushplus.api.ForwardRuleApi;
 import com.perk.pushplus.api.FriendApi;
 import com.perk.pushplus.api.ImageApi;
 import com.perk.pushplus.api.MessageApi;
@@ -78,6 +80,8 @@ public class PushPlusClient {
     @Getter private final FormApi form;
     @Getter private final DocApi doc;
     @Getter private final ExcelApi excel;
+    @Getter private final ForwardRuleApi forwardRule;
+    @Getter private final ForwardLogApi forwardLog;
 
     private PushPlusClient(PushPlusConfig config, HttpRequester httpRequester) {
         if (config == null) {
@@ -107,6 +111,8 @@ public class PushPlusClient {
         this.form = new FormApi(this.config, this.httpRequester, this.accessKeyManager);
         this.doc = new DocApi(this.config, this.httpRequester, this.accessKeyManager);
         this.excel = new ExcelApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.forwardRule = new ForwardRuleApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.forwardLog = new ForwardLogApi(this.config, this.httpRequester, this.accessKeyManager);
     }
 
     /* =========================== 工厂 / Builder =========================== */

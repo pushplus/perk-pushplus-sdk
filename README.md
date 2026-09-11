@@ -7,7 +7,7 @@
 - AccessKey **自动获取、缓存、过期前刷新、失效自动重试**，调用方无感知
 - **本地限流守卫**：发送接口命中 `code=900`（请求次数过多）时自动短路同 token 的后续调用，避免无效请求与账号进一步受限（[官方建议](https://www.pushplus.plus/doc/guide/code.html)）
 - 单条 `/send`、多渠道 `/batchSend`、消息回调（`message_complate` / `add_topic_user` / `add_friend`）类型化解析
-- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、QQ 机器人、功能设置、预处理、图片服务、push 表单、push 文档、push 表格
+- 全部开放接口：消息、用户、消息令牌、群组、群组用户、好友、Webhook、公众号/企业微信/邮箱渠道、ClawBot、QQ 机器人、功能设置、预处理、图片服务、push 表单、push 文档、push 表格、消息规则
 - 完善的 Builder 模式与强类型枚举（`Channel`、`Template`、`SendStatus`、`WebhookType`、`CallbackEvent`、`ErrorCode`）
 
 ## 模块说明
@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.3.2</version>
+    <version>1.3.3</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.3.2</version>
+    <version>1.3.3</version>
 </dependency>
 ```
 
@@ -163,6 +163,23 @@ client.send(SendRequest.builder()
 // 功能设置
 client.getSetting().changeIsSend(1);
 
+// 消息规则（会员）
+client.getForwardRule().saveSetting(1); // 开启，未命中时仍按默认方式推送
+client.getForwardRule().add(ForwardRuleSaveRequest.builder()
+        .ruleName("阿里云监控多渠道")
+        .tokenId(-1L)
+        .sourceType(1)
+        .titleTemplate("{{alertName}}")
+        .variables(List.of(ForwardVariable.builder()
+                .varName("alertName")
+                .sourceType(3)
+                .extractType(1)
+                .extractKey("alertName")
+                .build()))
+        .build());
+PageResult<ForwardRuleItem> rules = client.getForwardRule().list(PageQuery.of(1, 20));
+PageResult<ForwardLogItem> logs = client.getForwardLog().list(ForwardLogListQuery.of(1, 20, null, 1));
+
 // 图片服务（一行上传到 PushPlus 图床）
 ImageUploadResult img = client.getImage().uploadFile(Path.of("logo.png"));
 String url = img.getUrl();   // 直接拿到可访问的图片地址
@@ -232,6 +249,8 @@ client.send(SendRequest.builder()
 | `client.getForm()` | push 表单开放接口 |
 | `client.getDoc()` | push 文档开放接口 |
 | `client.getExcel()` | push 表格开放接口 |
+| `client.getForwardRule()` | 十四 消息规则接口 |
+| `client.getForwardLog()` | 十四 消息规则触发记录 |
 
 ## 图片服务
 
