@@ -4,6 +4,7 @@ import com.perk.pushplus.access.AccessKeyManager;
 import com.perk.pushplus.api.AccessKeyApi;
 import com.perk.pushplus.api.ChannelApi;
 import com.perk.pushplus.api.ClawBotApi;
+import com.perk.pushplus.api.CmccApi;
 import com.perk.pushplus.api.DocApi;
 import com.perk.pushplus.api.ExcelApi;
 import com.perk.pushplus.api.FormApi;
@@ -73,6 +74,7 @@ public class PushPlusClient {
     @Getter private final WebhookApi webhook;
     @Getter private final ChannelApi channel;
     @Getter private final ClawBotApi clawBot;
+    @Getter private final CmccApi cmcc;
     @Getter private final QqBotApi qqBot;
     @Getter private final SettingApi setting;
     @Getter private final PreApi pre;
@@ -104,6 +106,7 @@ public class PushPlusClient {
         this.webhook = new WebhookApi(this.config, this.httpRequester, this.accessKeyManager);
         this.channel = new ChannelApi(this.config, this.httpRequester, this.accessKeyManager);
         this.clawBot = new ClawBotApi(this.config, this.httpRequester, this.accessKeyManager);
+        this.cmcc = new CmccApi(this.config, this.httpRequester, this.accessKeyManager);
         this.qqBot = new QqBotApi(this.config, this.httpRequester, this.accessKeyManager);
         this.setting = new SettingApi(this.config, this.httpRequester, this.accessKeyManager);
         this.pre = new PreApi(this.config, this.httpRequester, this.accessKeyManager);

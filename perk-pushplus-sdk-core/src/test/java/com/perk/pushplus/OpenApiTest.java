@@ -231,6 +231,37 @@ class OpenApiTest {
     }
 
     @Test
+    void cmcc_bind_and_status() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/api/open/cmcc/bind", 200, "{\"code\":200,\"msg\":\"绑定成功\"}")
+                .whenPath("/api/open/cmcc/info", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"bound\":1,\"apiKeyMasked\":\"ak_***xxx\"," +
+                                "\"createTime\":\"2026-09-14 10:20:00\"}}")
+                .whenPath("/api/open/cmcc/test", 200, "{\"code\":200,\"msg\":\"测试消息已发送\"}")
+                .whenPath("/api/open/cmcc/unbind", 200, "{\"code\":200,\"msg\":\"ok\"}");
+
+        PushPlusClient c = client(http);
+
+        c.getCmcc().bind("ak_xxxxxxxxxxxxxxxx");
+        var bindReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/cmcc/bind"))
+                .findFirst().orElseThrow();
+        assertTrue(bindReq.body().contains("\"apiKey\":\"ak_xxxxxxxxxxxxxxxx\""), bindReq.body());
+
+        var info = c.getCmcc().info();
+        assertEquals(1, info.getBound());
+        assertEquals("ak_***xxx", info.getApiKeyMasked());
+
+        c.getCmcc().sendTest();
+        assertTrue(http.getRecords().stream().anyMatch(r -> r.url().contains("/api/open/cmcc/test")));
+
+        c.getCmcc().unbind();
+        assertTrue(http.getRecords().stream().anyMatch(r -> r.url().contains("/api/open/cmcc/unbind")));
+    }
+
+    @Test
     void qq_bot_bind_and_group_config() {
         MockHttpRequester http = new MockHttpRequester()
                 .whenPath("/getAccessKey", 200,
