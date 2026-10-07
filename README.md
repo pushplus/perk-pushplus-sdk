@@ -28,7 +28,7 @@
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-core</artifactId>
-    <version>1.3.4</version>
+    <version>1.3.5</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ Spring Boot 项目：
 <dependency>
     <groupId>com.perk-net</groupId>
     <artifactId>perk-pushplus-sdk-spring-boot-starter</artifactId>
-    <version>1.3.4</version>
+    <version>1.3.5</version>
 </dependency>
 ```
 
@@ -167,8 +167,23 @@ client.send(SendRequest.builder()
         .title("服务告警")
         .content("订单服务响应超时")
         .channel(Channel.QQ)
-        .option("ops-group")   // 不传 option 则发给自己
+        .option("ops-group")   // 不传 option 则用默认机器人发给自己
         .template(Template.TXT)
+        .build());
+
+// QQ 自有机器人：校验凭证 -> 添加 -> 扫码绑定 -> 设为默认 / 建“发给自己”配置
+QqCustomBotRequest credential = QqCustomBotRequest.builder().botAppId("102xxxxxx").appSecret("xxxx").build();
+QqBotInfo preview = client.getQqBot().previewCustomBot(credential); // 返回机器人昵称头像，不保存
+client.getQqBot().addCustomBot(credential);
+QqMyBotList myBots = client.getQqBot().myBots();                    // 回调地址、IP 白名单、需订阅事件也在这里
+QqBotBindLink customLink = client.getQqBot().getBindLink(false, "102xxxxxx");
+QqBotBindInfo customBind = client.getQqBot().botInfo("102xxxxxx");
+client.getQqBot().setDefault("102xxxxxx");                         // 不传 option 时改用该机器人
+client.getQqBot().add(QqBotSaveRequest.builder()
+        .qqName("自有机器人私聊")
+        .qqCode("my-bot-self")
+        .sendType(QqBotApi.SEND_TYPE_SELF)
+        .botAppId("102xxxxxx")
         .build());
 
 // 功能设置

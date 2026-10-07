@@ -7,6 +7,9 @@ import com.perk.pushplus.model.PageQuery;
 import com.perk.pushplus.model.PageResult;
 import com.perk.pushplus.model.open.message.MessageItem;
 import com.perk.pushplus.model.open.message.SendMessageResult;
+import com.perk.pushplus.model.open.qq.QqBotSaveRequest;
+import com.perk.pushplus.model.open.qq.QqCustomBotRequest;
+import com.perk.pushplus.api.QqBotApi;
 import com.perk.pushplus.model.open.topic.TopicListQuery;
 import com.perk.pushplus.model.open.topic.TopicUserListQuery;
 import com.perk.pushplus.test.MockHttpRequester;
@@ -271,7 +274,7 @@ class OpenApiTest {
                                 "\"bindCode\":\"A1B2C3\",\"expireSeconds\":300,\"botName\":\"pushplus\"}}")
                 .whenPath("/api/open/qqBot/botInfo", 200,
                         "{\"code\":200,\"msg\":\"ok\",\"data\":{\"isBind\":1,\"receiveStatus\":1," +
-                                "\"botInfo\":{\"appId\":\"1\",\"username\":\"pushplus\"}}}")
+                                "\"botInfo\":{\"botAppId\":\"1\",\"username\":\"pushplus\"}}}")
                 .whenPath("/api/open/qqBot/groupList", 200,
                         "{\"code\":200,\"msg\":\"ok\",\"data\":[{\"id\":9,\"groupOpenId\":\"OPEN-1\",\"status\":1," +
                                 "\"groupName\":\"运维告警群\",\"groupTags\":[\"运维\"],\"groupMemberNum\":128}]}")
@@ -319,6 +322,83 @@ class OpenApiTest {
                 .findFirst().orElseThrow();
         assertEquals("DELETE", deleteReq.method());
         assertTrue(deleteReq.url().contains("id=3"), deleteReq.url());
+    }
+
+    @Test
+    void qq_bot_custom_bot() {
+        MockHttpRequester http = new MockHttpRequester()
+                .whenPath("/getAccessKey", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"accessKey\":\"AK\",\"expiresIn\":7200}}")
+                .whenPath("/api/open/qqBot/myBots", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"bots\":[" +
+                                "{\"botAppId\":\"1\",\"botType\":1,\"isBind\":1,\"isDefault\":1}," +
+                                "{\"botAppId\":\"102\",\"botType\":2,\"isBind\":0,\"isDefault\":0}]," +
+                                "\"customBotCount\":1,\"customBotLimit\":5," +
+                                "\"webhookUrl\":\"https://www.pushplus.plus/api/common/qq/webhook\"}}")
+                .whenPath("/api/open/qqBot/customBot/preview", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"botAppId\":\"102\",\"username\":\"my-bot\",\"botType\":2}}")
+                .whenPath("/api/open/qqBot/customBot/add", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/qqBot/customBot/delete", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/qqBot/getBindLink", 200,
+                        "{\"code\":200,\"msg\":\"ok\",\"data\":{\"bindCode\":\"A1B2C3\",\"botAppId\":\"102\",\"botType\":2}}")
+                .whenPath("/api/open/qqBot/setDefault", 200, "{\"code\":200,\"msg\":\"ok\"}")
+                .whenPath("/api/open/qqBot/groupList", 200, "{\"code\":200,\"msg\":\"ok\",\"data\":[]}")
+                .whenPath("/api/open/qqBot/add", 200, "{\"code\":200,\"msg\":\"ok\"}");
+
+        PushPlusClient c = client(http);
+        var qq = c.getQqBot();
+
+        var mine = qq.myBots();
+        assertEquals(2, mine.getBots().size());
+        assertEquals(2, mine.getBots().get(1).getBotType());
+        assertEquals(5, mine.getCustomBotLimit());
+        assertEquals("102", mine.getBots().get(1).getBotAppId());
+
+        var credential = QqCustomBotRequest.builder().botAppId("102").appSecret("secret").build();
+        var preview = qq.previewCustomBot(credential);
+        assertEquals("my-bot", preview.getUsername());
+        assertEquals("102", preview.getBotAppId());
+        qq.addCustomBot(credential);
+        var addBotReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/customBot/add"))
+                .findFirst().orElseThrow();
+        assertTrue(addBotReq.body().contains("\"botAppId\":\"102\""), addBotReq.body());
+        assertTrue(addBotReq.body().contains("\"appSecret\":\"secret\""), addBotReq.body());
+
+        var link = qq.getBindLink(false, "102");
+        assertEquals(2, link.getBotType());
+        var linkReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/getBindLink"))
+                .findFirst().orElseThrow();
+        assertTrue(linkReq.url().contains("botAppId=102"), linkReq.url());
+        assertFalse(linkReq.url().contains("refresh"), linkReq.url());
+
+        qq.groupList("102");
+        assertTrue(http.getRecords().stream()
+                .anyMatch(r -> r.url().contains("/api/open/qqBot/groupList?botAppId=102")));
+
+        qq.setDefault("102");
+        assertTrue(http.getRecords().stream()
+                .anyMatch(r -> r.url().contains("/api/open/qqBot/setDefault?botAppId=102")));
+
+        qq.add(QqBotSaveRequest.builder()
+                .qqName("自有机器人私聊")
+                .qqCode("my-bot-self")
+                .sendType(QqBotApi.SEND_TYPE_SELF)
+                .botAppId("102")
+                .build());
+        var addReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/add"))
+                .findFirst().orElseThrow();
+        assertTrue(addReq.body().contains("\"sendType\":1"), addReq.body());
+        assertTrue(addReq.body().contains("\"botAppId\":\"102\""), addReq.body());
+
+        qq.deleteCustomBot("102");
+        var deleteReq = http.getRecords().stream()
+                .filter(r -> r.url().contains("/api/open/qqBot/customBot/delete"))
+                .findFirst().orElseThrow();
+        assertEquals("DELETE", deleteReq.method());
+        assertTrue(deleteReq.url().contains("?botAppId=102"), deleteReq.url());
     }
 
     @Test

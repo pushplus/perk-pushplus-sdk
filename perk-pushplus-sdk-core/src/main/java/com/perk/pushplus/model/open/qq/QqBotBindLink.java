@@ -15,8 +15,10 @@ public class QqBotBindLink {
     private String bindCode;
     /** 有效期秒数，默认 300。 */
     private Integer expireSeconds;
-    /** 为当前用户分配的官方机器人 appId。 */
+    /** 要绑定的机器人 appId；未指定 botAppId 时为分配给当前用户的官方机器人。 */
     private String botAppId;
     private String botName;
     private String botAvatar;
+    /** 1-官方机器人，2-自有机器人。 */
+    private Integer botType;
 }

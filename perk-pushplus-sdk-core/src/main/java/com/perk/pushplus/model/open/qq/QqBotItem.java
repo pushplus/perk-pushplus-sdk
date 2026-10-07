@@ -13,11 +13,16 @@ public class QqBotItem {
     private String qqName;
     /** 配置编码；发送消息时作为 option 传入。 */
     private String qqCode;
-    /** 2-发到 QQ 群。 */
+    /** 1-发给自己，2-发到 QQ 群。 */
     private Integer sendType;
+    /** sendType=2 时返回。 */
     private Long qqGroupId;
     private String groupRemark;
     private String groupOpenId;
     private String groupName;
+    /** 发送使用的机器人 appId。 */
+    private String botAppId;
+    private String botName;
+    private String botAvatar;
     private String updateTime;
 }
